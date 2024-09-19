@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const escpos = require('escpos');
+const { exec } = require('child_process');
 const app = express();
 const port = 3000;
 
@@ -12,32 +13,52 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Sample endpoint to receive print jobs
-app.post('/print', async (req, res) => {
-  const { printer, job } = req.body;
+app.post('/print', (req, res) => {
+  const { printer, job, printerType } = req.body;
 
   console.log(`Print job received:`);
   console.log(`Printer: ${printer}`);
   console.log(`Job: ${job}`);
+  console.log(`Printer Type: ${printerType}`);
 
-  // Example code to print using escpos
   try {
-    const device = new escpos.Bluetooth(printer); // Replace with your printer connection
-    const printerInstance = new escpos.Printer(device);
+    if (printerType === 'escpos') {
+      // For ESC/POS printers
+      const device = new escpos.Bluetooth(printer); // Adjust for your connection type
+      const printerInstance = new escpos.Printer(device);
 
-    device.open((error) => {
-      if (error) {
-        console.error('Error opening printer:', error);
-        return res.status(500).send('Error opening printer');
-      }
-
-      printerInstance
-        .text(job)
-        .cut()
-        .close(() => {
-          console.log(`Print job sent to printer: ${printer}`);
-          res.send(`Print job sent to printer: ${printer}`);
-        });
-    });
+      device.open((error) => {
+        if (error) throw error;
+        printerInstance
+          .text(job)
+          .cut()
+          .close(() => res.send(`Print job sent to ESC/POS printer: ${printer}`));
+      });
+    } else if (printerType === 'laser') {
+      // For Laser printers
+      const printCommand = `lp -d ${printer} -`; // Replace with appropriate command or library
+      exec(printCommand, { input: job }, (error, stdout, stderr) => {
+        if (error) {
+          console.error('Error sending print job:', error);
+          res.status(500).send('Error sending print job');
+        } else {
+          res.send(`Print job sent to Laser printer: ${printer}`);
+        }
+      });
+    } else if (printerType === 'inkjet') {
+      // For Inkjet printers
+      const printCommand = `lp -d ${printer} -`; // Replace with appropriate command or library
+      exec(printCommand, { input: job }, (error, stdout, stderr) => {
+        if (error) {
+          console.error('Error sending print job:', error);
+          res.status(500).send('Error sending print job');
+        } else {
+          res.send(`Print job sent to Inkjet printer: ${printer}`);
+        }
+      });
+    } else {
+      res.status(400).send('Unsupported printer type');
+    }
   } catch (error) {
     console.error('Error sending print job:', error);
     res.status(500).send('Error sending print job');
