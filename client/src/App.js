@@ -43,7 +43,7 @@ function App() {
   
       try {
         // Use axios to send the print job
-        const response = await axios.post('https://delve-bluetoothprinter.onrender.com/print', {
+        const response = await axios.post('https://bluetooth-printer.onrender.com/print', {
           printer: selectedPrinter,
           job: jobData
         }, {
