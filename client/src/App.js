@@ -14,11 +14,11 @@ function App() {
       });
 
       const server = await device.gatt.connect();
-      console.log('Connected to printer:', device.name);
+      alert('Connected to printer:', device.name);
       setPrinter(device.name);
       setPrinters([...printers, device.name]); // Save connected printer
     } catch (error) {
-      console.log('Error connecting to Bluetooth printer:', error);
+      alert('Error connecting to Bluetooth printer:', error);
     }
   };
 
@@ -52,12 +52,12 @@ function App() {
           }
         });
   
-        console.log(response.data);
+        alert(response.data);
       } catch (error) {
         console.error('Error sending print job:', error);
       }
     } else {
-      console.log('No printers connected');
+      alert('No printers connected');
     }
   };
   // const sendPrintJob = async (buttonType) => {
@@ -88,9 +88,9 @@ function App() {
   //     });
 
   //     const result = await response.text();
-  //     console.log(result);
+  //     alert(result);
   //   } else {
-  //     console.log('No printers connected');
+  //     alert('No printers connected');
   //   }
   // };
 
