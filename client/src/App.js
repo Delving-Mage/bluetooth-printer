@@ -43,7 +43,7 @@ function App() {
   
       try {
         // Use axios to send the print job
-        const response = await axios.post('http://localhost:3000/print', {
+        const response = await axios.post('https://bluetooth-printer.onrender.com/print', {
           printer: selectedPrinter,
           job: jobData,
           printerType: 'escpos' // or 'laser', 'inkjet', etc.
