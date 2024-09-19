@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 function App() {
   const [printer, setPrinter] = useState(null);
   const [printers, setPrinters] = useState([]);
+  const [printerType, setPrinterType] = useState('escpos'); // Default printer type
 
   // Function to connect to a Bluetooth printer
   const connectPrinter = async () => {
@@ -25,7 +26,7 @@ function App() {
   // Unified sendPrintJob function
   const sendPrintJob = async (buttonType) => {
     let selectedPrinter;
-  
+
     // Determine printer based on button type
     if (printers.length > 1) {
       if (buttonType === 'KOT') {
@@ -36,23 +37,23 @@ function App() {
     } else if (printers.length === 1) {
       selectedPrinter = printers[0]; // Use the only connected printer
     }
-  
+
     if (selectedPrinter) {
       // Job data based on button type
       const jobData = buttonType === 'KOT' ? 'KOT Print Data' : 'Save & Print Data';
-  
+
       try {
         // Use axios to send the print job
         const response = await axios.post('https://bluetooth-printer.onrender.com/print', {
           printer: selectedPrinter,
           job: jobData,
-          printerType: 'escpos' // or 'laser', 'inkjet', etc.
+          printerType: printerType // Pass the selected printer type
         }, {
           headers: {
             'Content-Type': 'application/json',
           }
         });
-  
+
         alert(response.data);
       } catch (error) {
         console.error('Error sending print job:', error);
@@ -61,39 +62,6 @@ function App() {
       alert('No printers connected');
     }
   };
-  // const sendPrintJob = async (buttonType) => {
-  //   let selectedPrinter;
-
-  //   // Determine printer based on button type
-  //   if (printers.length > 1) {
-  //     if (buttonType === 'KOT') {
-  //       selectedPrinter = printers[0]; // First printer for KOT Print
-  //     } else if (buttonType === 'SAVE') {
-  //       selectedPrinter = printers[1]; // Second printer for Save & Print
-  //     }
-  //   } else if (printers.length === 1) {
-  //     selectedPrinter = printers[0]; // Use the only connected printer
-  //   }
-
-  //   if (selectedPrinter) {
-  //     // Job data based on button type
-  //     const jobData = buttonType === 'KOT' ? 'KOT Print Data' : 'Save & Print Data';
-
-  //     // Logic to send print data to the connected printer
-  //     const response = await fetch('/print', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ printer: selectedPrinter, job: jobData }),
-  //     });
-
-  //     const result = await response.text();
-  //     alert(result);
-  //   } else {
-  //     alert('No printers connected');
-  //   }
-  // };
 
   return (
     <div className="App">
@@ -110,6 +78,22 @@ function App() {
             </ul>
           </div>
         )}
+      </div>
+
+      {/* Dropdown for selecting printer type */}
+      <div>
+        <label htmlFor="printerType">Select Printer Type: </label>
+        <select
+          id="printerType"
+          value={printerType}
+          onChange={(e) => setPrinterType(e.target.value)}
+        >
+          <option value="escpos">ESC/POS</option>
+          <option value="laser">Laser</option>
+          <option value="inkjet">Inkjet</option>
+          <option value="thermal">Thermal</option>
+          {/* Add more printer types as needed */}
+        </select>
       </div>
 
       {/* Updated button click handlers to pass the correct button type */}

@@ -22,7 +22,7 @@ app.post('/print', (req, res) => {
   console.log(`Printer Type: ${printerType}`);
 
   try {
-    if (printerType === 'escpos') {
+    if (printerType === 'escpos' || printerType === 'thermal') {
       // For ESC/POS printers
       const device = new escpos.Bluetooth(printer); // Adjust for your connection type
       const printerInstance = new escpos.Printer(device);
