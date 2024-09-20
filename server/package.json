@@ -13,6 +13,7 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "escpos": "^3.0.0-alpha.6",
+    "escpos-serialport": "^3.0.0-alpha.4",
     "express": "^4.21.0",
     "noble": "^1.9.1"
   }

@@ -1,61 +1,95 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+const { exec } = require('child_process');
+const os = require('os');
+
 const app = express();
 const port = 3000;
 
-// Enable CORS for all routes
 app.use(cors());
+app.use(express.json());
 
-// Middleware to parse incoming JSON data
-app.use(bodyParser.json());
+// Endpoint to get the list of paired Bluetooth printers
+app.get('/printers', (req, res) => {
+  const currentOS = os.platform();
+  let command;
 
-// Helper function to execute shell commands asynchronously
-const { exec } = require('child_process');
-
-const execCommand = (command, input) => {
-  return new Promise((resolve, reject) => {
-    exec(command, { input }, (error, stdout, stderr) => {
-      if (error) {
-        reject(`Error: ${error.message}`);
-      }
-      if (stderr) {
-        reject(`Stderr: ${stderr}`);
-      }
-      resolve(stdout);
-    });
-  });
-};
-
-
-// Sample endpoint to receive print jobs
-app.post('/print', async (req, res) => {
-  const { printer, job, printerType } = req.body;
-
-  console.log(`Print job received:`);
-  console.log(`Printer: ${printer}`);
-  console.log(`Job: ${job}`);
-  console.log(`Printer Type: ${printerType}`);
-
-  try {
-    let printCommand = `lp -d ${printer} -`; // Replace with appropriate command
-
-    if (printerType) {
-      const result = await execCommand(printCommand, job);
-      console.log('Print Command Result:', result);
-      res.send(`Print job sent to ${printerType} printer: ${printer}`);
-    } else {
-      // Handle other printer types
-      res.status(400).send('Unsupported printer type');
-    }
-  } catch (error) {
-    console.error('Error sending print job:', error);
-    res.status(500).send('Error sending print job');
+  // Identify the OS and prepare the appropriate command
+  if (currentOS === 'darwin') {
+    // macOS
+    command = 'system_profiler SPBluetoothDataType';
+  } else if (currentOS === 'win32') {
+    // Windows
+    command = 'powershell "Get-PnpDevice -Class Printer | Select-Object -Property FriendlyName, InstanceId"';
+  } else {
+    return res.status(400).send('Unsupported OS');
   }
+
+  exec(command, (error, stdout) => {
+    if (error) {
+      console.error('Error finding printers:', error);
+      return res.status(500).send('Could not retrieve printers');
+    }
+
+    const printers = stdout.split('\n').filter(line => line.trim() !== '');
+    res.json(printers);
+  });
 });
 
+app.post('/print', (req, res) => {
+  const { printerName, job } = req.body;
+  const currentOS = os.platform();
 
-// Start the server
+  // Check if printerName and job are provided
+  if (!printerName || !job) {
+    return res.status(400).send('Printer name and job must be provided.');
+  }
+
+  let command;
+
+  // Identify the OS and prepare the appropriate command
+  if (currentOS === 'darwin') {
+    command = `system_profiler SPBluetoothDataType | grep -A 1 "${printerName}"`;
+  } else if (currentOS === 'win32') {
+    command = `powershell "Get-PnpDevice -Class Printer | Where-Object {$_.FriendlyName -eq '${printerName}'}"`;
+  } else {
+    return res.status(400).send('Unsupported OS');
+  }
+
+  // Find the printer's MAC address or identifier
+  exec(command, (error, stdout) => {
+    if (error) {
+      console.error('Error finding printer:', error);
+      return res.status(500).send('Printer not found');
+    }
+
+    const lines = stdout.split('\n');
+    const printerInfo = lines.find(line => line.includes(printerName));
+
+    if (!printerInfo) {
+      return res.status(404).send('Printer not found');
+    }
+
+    let printCommand;
+    if (currentOS === 'darwin') {
+      const macAddress = printerInfo.split(' ')[1]; // Adjust parsing as needed
+      printCommand = `echo "${job}" | lp -d "${macAddress}"`;
+    } else if (currentOS === 'win32') {
+      printCommand = `powershell "Add-Type -AssemblyName System.Drawing; $p = New-Object System.Drawing.Printing.PrintDocument; $p.PrinterSettings.PrinterName = '${printerName}'; $p.PrintPage += { $text = '${job}'; $e.Graphics.DrawString($text, [System.Drawing.SystemFonts]::DefaultFont, [System.Drawing.Brushes]::Black, 10, 10) }; $p.Print()"`;
+    }
+
+    // Execute the print command
+    exec(printCommand, (error) => {
+      if (error) {
+        console.error('Error sending print job:', error);
+        return res.status(500).send('Failed to send print job');
+      }
+
+      res.send(`Print job sent to ${printerName}`);
+    });
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
