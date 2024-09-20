@@ -14,7 +14,6 @@ app.get('/printers', (req, res) => {
   const currentOS = os.platform();
   let command;
 
-  
   // Identify the OS and prepare the appropriate command
   if (currentOS === 'darwin') {
     // macOS
@@ -28,7 +27,6 @@ app.get('/printers', (req, res) => {
   } else {
     return res.status(400).send('Unsupported OS');
   }
-  
 
   exec(command, (error, stdout) => {
     if (error) {
@@ -55,8 +53,10 @@ app.post('/print', (req, res) => {
   // Identify the OS and prepare the appropriate command
   if (currentOS === 'darwin') {
     command = `system_profiler SPBluetoothDataType | grep -A 1 "${printerName}"`;
-  } else if (currentOS === 'win32') {
+  } else if (currentOS === 'win32' || currentOS === 'win64' || currentOS === 'windows') {
     command = `powershell "Get-PnpDevice -Class Printer | Where-Object {$_.FriendlyName -eq '${printerName}'}"`;
+  } else if (currentOS === 'linux') {
+    command = `lpstat -p -d`; // Command to find printer information on Linux
   } else {
     return res.status(400).send('Unsupported OS');
   }
@@ -79,8 +79,11 @@ app.post('/print', (req, res) => {
     if (currentOS === 'darwin') {
       const macAddress = printerInfo.split(' ')[1]; // Adjust parsing as needed
       printCommand = `echo "${job}" | lp -d "${macAddress}"`;
-    } else if (currentOS === 'win32') {
+    } else if (currentOS === 'win32' || currentOS === 'win64' || currentOS === 'windows') {
       printCommand = `powershell "Add-Type -AssemblyName System.Drawing; $p = New-Object System.Drawing.Printing.PrintDocument; $p.PrinterSettings.PrinterName = '${printerName}'; $p.PrintPage += { $text = '${job}'; $e.Graphics.DrawString($text, [System.Drawing.SystemFonts]::DefaultFont, [System.Drawing.Brushes]::Black, 10, 10) }; $p.Print()"`;
+    } else if (currentOS === 'linux') {
+      const linuxPrinterName = printerInfo.split(' ')[0]; // Extract printer name for Linux
+      printCommand = `echo "${job}" | lp -d "${linuxPrinterName}"`; // Use lp for printing in Linux
     }
 
     // Execute the print command
