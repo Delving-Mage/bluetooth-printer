@@ -14,16 +14,21 @@ app.get('/printers', (req, res) => {
   const currentOS = os.platform();
   let command;
 
+  
   // Identify the OS and prepare the appropriate command
   if (currentOS === 'darwin') {
     // macOS
     command = 'system_profiler SPBluetoothDataType';
-  } else if (currentOS === 'win32') {
+  } else if (currentOS === 'win32' || currentOS === 'win64' || currentOS === 'windows') {
     // Windows
     command = 'powershell "Get-PnpDevice -Class Printer | Select-Object -Property FriendlyName, InstanceId"';
+  } else if (currentOS === 'linux') {
+    // Linux
+    command = 'lpstat -p -d'; // Command to list printers in Linux
   } else {
     return res.status(400).send('Unsupported OS');
   }
+  
 
   exec(command, (error, stdout) => {
     if (error) {
